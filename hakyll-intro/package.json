@@ -1,0 +1,7 @@
+{
+  "name": "hakyll-intro",
+  "version": "0.0.1",
+  "dependencies": {
+    "less": "*"
+  }
+}
