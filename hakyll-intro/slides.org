@@ -1,0 +1,106 @@
+* Introducción a Hakyll
+
+** Preludio
+
+   [[https://www.haskell.org/cabal/][_Cabal_]]: Es la /buildtool/ que se utiliza para construir y
+   empaquetar de forma portable proyectos escritos en Haskell.
+
+   [[https://docs.haskellstack.org/en/stable/README/][_Stack_]]: Es una herramienta que complementa a Cabal (utiliza Cabal
+   por debajo) y que te ayuda a tener cada proyecto de Haskell en un
+   /sandbox/ (incluyendo GHC).
+
+** Qué es Hakyll
+
+   [[https://jaspervdj.be/hakyll/][_Hakyll_]]: La definición más directa dice que es un generador de
+   sitios web estáticos. La más completa dice que es un /eDSL/ que te
+   permite /construir generadores/ de sitios webs estáticos.
+
+   [[https://wiki.haskell.org/Embedded_domain_specific_language][_eDSL_]]: Lenguaje de Dominio Específico Embebido. Significa que un
+   DSL es embebido en otro lenguaje que actúa como /anfitrión/. En el
+   caso de Hakyll ese lenguaje es Haskell.
+
+** Los tres componentes del eDSL de Hakyll
+
+   The Rules, The Compiler, and The Routes
+
+** The Rules
+  
+   La /mónada/ Rules es en la que escribimos nuestro programa utilizando
+   el DSL que nos da Hakyll.
+
+   The Rules monad is where we use the declarative DSL provided by
+   Hakyll to specify how our static website is generated.
+
+*** Definición de Rules
+
+    #+BEGIN_SRC haskell
+      newtype Rules a = Rules
+        { unRules :: RWST RulesRead RuleSet RulesState
+        } deriving (Monad, Functor, Applicative)
+    #+END_SRC
+
+** The Compiler
+
+   La /mónada/ Compiler es la abstracción que se usa para ficheros
+   objetos de un formato a otro.
+
+*** Definición de Compiler
+
+    #+BEGIN_SRC haskell
+      newtype Compiler a = Compiler
+        { unCompiler :: CompilerRead -> IO (CompilerResult a)
+        }
+    #+END_SRC
+
+** The Routes
+
+   Como paso final después de compilar nuestros ficheros, está
+   guardarlos en alguna ruta en disco. Esto es precisamente lo que
+   determina el /monoide/ Routes: dónde un conjunto de ficheros será
+   escrito.
+
+*** Definición de Routes
+
+    #+BEGIN_SRC haskell
+      newtype Routes = Routes
+        { unRoutes :: RoutesRead -> Identifier -> IO (Maybe FilePath, UsedMetadata)
+        }
+
+      instance Monoid Routes where
+        -- mempty :: Routes
+        mempty = const2 . Routes . return $ (Nothing, False)
+          where const2 = const . const
+
+        -- mappend :: Routes -> Routes -> Routes
+        mappend (Routes f) (Routes g) = Routes $ \routesRead identifier -> do
+          (maybeFilePath, usedMedatadata) <- f routesRead identifier
+          case maybeFilePath of
+            Nothing -> g routesRead identifier
+            Just _  -> return (maybeFilePath, usedMedatadata)
+    #+END_SRC
+
+** Ejemplos
+
+   Ejemplos 1-7.
+
+** Recapitulando
+
+   - Hakyll no es perfecto pero sigue un enfoque de /library/ y no
+     tanto de /framework/ lo que nos da libertad para decidir cómo
+     queremos hacer nuestro generador de sitios web estáticos.
+
+   - Tiene muchas estructuras de datos interesantes pero las
+     principales para empezar a trabajar son: Rules, Compiler y
+     Routes.
+
+   - Empezad a construir sitios web con Hakyll! Si tienes dudas
+     preguntad en el canal de #hakyll en [[http://haskellnautas.herokuapp.com][Haskellnautas]] o en el IRC de
+     freenode.
+
+** Gracias
+
+   ¡Gracias por atender a la charla! >> return ()
+
+** Próximos Eventos
+
+   [[file:~/Downloads/hds.png]]
