@@ -1,0 +1,300 @@
+* Un paquete para configurarlos a todos
+
+  =use-package=
+
+* Qué es =use-package=
+
+  =use-package= es un paquete/plugin para Emacs que viene a resolver
+  los siguientes problemas:
+  
+  - Aislar la configuración de otros paquetes.
+  - Mejorar el tiempo que tarda Emacs en iniciar.
+  - Crear una configuración de Emacs portable y sin dependencias
+    externas.
+
+* Instalar =use-package= automáticamente
+
+  =package-enable-at-startup= y =(package-initialize)=
+
+* =package-enable-at-startup=
+
+   Esta variable controla si los paquetes instalados deben cargarse o
+   no:
+
+   #+BEGIN_QUOTE
+   Whether to activate installed packages when Emacs starts.
+   If non-nil, packages are activated after reading the init file
+   and before ‘after-init-hook’.
+   ...
+   Even if the value is nil, you can type M-x package-initialize to
+   activate the package system at any time.
+   #+END_QUOTE
+
+* =(package-initialize)=
+
+   Esta función se encarga de cargar los paquetes instalados y
+   activarlos:
+
+   #+BEGIN_QUOTE
+   Load Emacs Lisp packages, and activate them.
+   #+END_QUOTE
+
+* Instalando =use-package=
+
+   Con esta información ahora podemos auto-instalar =use-package= si
+   aún no lo está:
+
+   #+BEGIN_SRC elisp
+     (require 'package)
+
+     ;; Fuentes de paquetes
+     (setq elpa         '("elpa" . "http://elpa.gnu.org/packages/")
+           org          '("org" . "http://orgmode.org/elpa/")
+           melpa        '("melpa" . "http://melpa.org/packages/")
+           melpa/stable '("melpa-stable" . "http://stable.melpa.org/packages/")
+           )
+
+
+     (setq package-enable-at-startup nil
+           package-archives `(,elpa
+                              ,org
+                              ,melpa
+                              ,melpa/stable
+                              ))
+
+     (package-initialize)
+
+     (unless (package-installed-p 'use-package)
+       (package-refresh-contents)
+       (package-install 'use-package))
+
+     (require 'use-package)
+  #+END_SRC
+
+* Formas de operación
+
+  =use-package= nos permite cargar los paquetes de dos formas:
+  
+  - _estricta_: el paquete se intenta cargar al iniciar Emacs
+  - _no-estricta_: la carga del paquete se hace en diferido
+
+  Para solucionar uno de nuestros problemas expuestos al principio:
+  mejorar el tiempo que tarda Emacs en iniciar, debemos seguir la
+  regla: intentar tener la mayor cantidad de paquetes que carguen de
+  forma no-estricta.
+
+* Uso básico
+
+  #+BEGIN_SRC elisp
+    (use-package magit)
+  #+END_SRC
+
+  Con esta línea:
+  - Intentamos cargar el paquete =magit= de forma estricta
+  - Pero solo si =magit= está instalado en nuestro sistema
+  - Si no lo está un /warning/ aparecerá en el buffer =*Messages*=
+
+* Opción =:ensure=
+
+   #+BEGIN_SRC elisp
+     (use-package magit :ensure t)
+   #+END_SRC
+
+   Con esta opción instalamos el paquete si aún no lo tenemos en el
+   sistema.
+
+   Esta opción viene a solucionar uno de los problemas que teníamos
+   originalmente: crear una configuración portable sin dependencias
+   externas.
+
+* Opción =:init=
+
+   #+BEGIN_SRC elisp
+     (use-package man
+       :init (setq Man-width 79))
+   #+END_SRC
+
+   Esta opción nos permite ejecutar instrucciones antes de cargar el
+   paquete.
+
+* Opción =:config=
+
+   #+BEGIN_SRC elisp
+     (use-package autorevert
+       :config (global-auto-revert-mode))
+   #+END_SRC
+
+   Esta opción nos permite ejecutar instrucciones después de cargar el
+   paquete.
+
+* Opción =:diminish=
+
+   #+BEGIN_SRC elisp
+     (use-package hi-lock
+       :diminish hi-lock-mode)
+   #+END_SRC
+
+   Esta opción nos permite borrar el nombre del modo del /mode-line/.
+
+* Opción =:bind=
+
+   #+BEGIN_SRC elisp
+     (use-package discover-my-major
+       :ensure t
+       :bind ("C-h C-m" . discover-my-major))
+
+     (use-package isearch
+       :init
+       (defun my/isearch-done-opposite (&optional nopush edit)
+         "End current search in the opposite side of the match.
+
+     The arguments NOPUSH and EDIT are passed to the wrapped function `isearch-done'."
+         (interactive)
+         (funcall #'isearch-done nopush edit)
+         (when isearch-other-end (goto-char isearch-other-end)))
+       :bind (:map isearch-mode-map ("C-<return>" . my/isearch-done-opposite)))
+   #+END_SRC
+
+   Esta opción nos permite especificar uno o más atajos de teclado a
+   comandos expuestos por el paquete que estamos cargando.
+   *IMPORTANTE* cada vez que utilizamos =:bind= =use-package= entiende
+   que tiene que cargar el paquete de forma /no-estricta/, es decir,
+   lo cargará solo cuando invoquemos alguno de los atajos de teclado
+   que hemos especificado.
+
+* Opción =:bind*=
+
+   #+BEGIN_SRC elisp
+     (use-package editing-extras
+       :load-path "~/.emacs.d/site-lisp"
+       :bind* (
+
+               ("C-M-S-k" . my/kill-sexp-backwards)
+               ("C-x C-v" . my/find-alternate-file-with-sudo)
+               ("C-M-s"   . my/isearch-forward-regexp-other-window)
+               ("C-M-r"   . my/isearch-backward-regexp-other-window)
+               ("C-x C-e" . my/eval-last-sexp)
+
+               ))
+   #+END_SRC
+
+   Esta opción es casi idéntica a =:bind=, la única diferencia es que
+   los atajos de teclado que definamos no podrán ser sobre-escritos
+   por los modos que tengamos activados.
+
+* Opciones =:bind-keymap= y =:bind-keymap*=
+
+   Estas opciones son correspondientes con =:bind= y =:bind*= pero
+   actúan sobre el =keymap= expuesto en el paquete que estamos
+   cargando.
+
+* Opción =:mode=
+
+   #+BEGIN_SRC elisp
+     (use-package yaml-mode
+       :ensure t
+       :mode "\\.ya?ml\\'")
+
+     (use-package restclient
+       :ensure t
+       :mode ("\\.http\\'" . restclient-mode))
+   #+END_SRC
+
+   Esta opción nos permite asociar una extensión de archivo al modo
+   expuesto por el paquete que estamos cargando. Véase
+   =auto-mode-alist=. Esta opción también causa que el paquete se
+   cargue de forma /no-estricta/.
+
+* Opción =:interpreter=
+
+   #+BEGIN_SRC elisp
+     (use-package haskell-mode
+       :ensure t
+       :mode "\\.hs\\'"
+       :interpreter ("runhaskell" . haskell-mode))
+   #+END_SRC
+
+   Esta opción nos permite especificar el intérprete asociado al modo
+   expuesto por el paquete. Véase =interpreter-mode-alist=.p
+
+* Opción =:demand=
+
+   #+BEGIN_SRC elisp
+     (use-package helm-swoop
+       :ensure t
+       :demand t
+       :bind (("M-i" . helm-swoop)
+              ("M-I" . helm-multi-swoop)
+              :isearch-mode-map
+              ("M-i" . helm-swoop-from-isearch)))
+   #+END_SRC
+
+   Esta opción anula cualquier carga en diferida que pueda ocurrir.
+
+* Opción =:defer=
+
+   #+BEGIN_SRC elisp
+   (use-package white-theme :ensure t :defer t)
+   #+END_SRC
+
+   Esta opción nos permite forzar la carga en diferido.
+
+* Opción =:if=
+
+   #+BEGIN_SRC elisp
+     (use-package mac :if (string-equal system-type "darwin"))
+   #+END_SRC
+   
+   Esta opción carga el paquete solo si la condición es cierta.
+
+* Opción =:load-path=
+
+   #+BEGIN_SRC elisp
+     (use-package remember-last-theme :load-path "~/src/public/remember-theme")
+   #+END_SRC
+
+   Esta opción nos permite especificar el =load-path= del paquete que
+   queremos cargar.
+
+* Opción =:pin=
+
+   #+BEGIN_SRC elisp
+     (use-package org
+       :ensure org-plus-contrib
+       :pin org
+       :mode (("\\.org\\'" . org-mode))
+       :bind (("C-c o c" . org-capture)
+              ("C-c o l" . org-store-link)
+              ("C-c o a" . org-agenda)
+              ("C-c o h" . helm-info-org))
+       :demand t
+       :init
+       (setq org-agenda-files '("~/Documents")
+             org-src-fontify-natively t
+             )
+       (eval-after-load "org" '(require 'ox-md nil t)))
+   #+END_SRC
+
+   Esta opción nos permite especificar el archivo del que queremos
+   obtener el paquete a instalar.
+
+* Opciones no contempladas
+
+  - =:preface=
+  - =:after=
+  - =:functions=
+  - =:commands=
+
+* Cosas que echo en falta
+  
+  - Añadir al keymap de un modo funcionalidad expuesta por otros
+    paquetes.
+
+  - Algún tipo de análisis que te diga los paquetes que se cargan en
+    diferido y los que no.
+
+* Gracias
+
+  #+BEGIN_SRC elisp
+  (message "¡Muchas gracias!")
+  #+END_SRC
